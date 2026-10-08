@@ -74,4 +74,4 @@ python tools/build_dictionary.py <folder with es_ES/es_AR .dic and .aff> data/wo
   distributed under the Mozilla Public License 1.1. See `data/DICTIONARY_LICENSE.md`.
 - The game is made with Godot Engine (MIT). Its licence and those of its components are
   shown inside the app under "Créditos y licencias".
-- No licence has been chosen yet for the game's own code: all rights reserved.
+- The game's own code, graphics and name are all rights reserved. See `LICENSE`.

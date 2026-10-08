@@ -1,0 +1,26 @@
+Copyright (c) 2026 nawelitus. All rights reserved.
+
+This repository is public so that the Spanish word list used by the game can be
+inspected, as the Mozilla Public License 1.1 requires for the modified dictionary
+files, and to host the privacy policy of the app. It is not an open source release.
+
+Except where stated below, no permission is granted to copy, modify, distribute,
+sublicense or use the game's source code, graphics (icon, store graphics and
+screenshots) or the name "Palabras Escondidas". GitHub's Terms of Service allow
+other GitHub users to view and fork this repository on GitHub; they grant no other
+rights.
+
+Third-party material and its licenses
+
+1. Word list. data/words_es.txt is derived from the Spanish Hunspell dictionaries
+   (es_ES and es_AR) of the RLA-ES project, which are offered under a choice of
+   GPL 3+, LGPL 3+ or MPL 1.1+. This modified list is used and distributed under the
+   Mozilla Public License 1.1 (https://www.mozilla.org/MPL/1.1/). You may use it under
+   those terms. See data/DICTIONARY_LICENSE.md for the changes made and the credit.
+
+2. Godot Engine. The game is built with Godot Engine, released under the MIT license
+   (https://godotengine.org/license). Godot's license text and those of its bundled
+   components, including the Open Sans font (SIL Open Font License 1.1), are shown
+   inside the app under "Créditos y licencias".
+
+Contact: softwelitus@gmail.com
