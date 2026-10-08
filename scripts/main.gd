@@ -7,6 +7,7 @@ const MIN_PLAYABLE_WORDS := 100
 const LOW_TIME_SECONDS := 10.0
 const MESSAGE_SECONDS := 0.9
 const BOARD_SIDE := 672.0
+const GAME_TITLE := "Palabras Escondidas"
 const INTRO_TEXT := "Encuentra palabras uniendo letras vecinas, también en diagonal. Tienes 3 minutos."
 
 ## Longest time step the round clock accepts in one frame. Protects the timer
@@ -53,7 +54,7 @@ func _ready() -> void:
 	_build_ui()
 	GameSettings.skin_changed.connect(_apply_skin)
 	_apply_skin(GameSettings.current_skin())
-	_show_overlay("Jueguito", "Cargando diccionario…", "", false)
+	_show_overlay(GAME_TITLE, "Cargando diccionario…", "", false)
 	# Let the loading screen render before the blocking dictionary load.
 	await get_tree().process_frame
 	await get_tree().process_frame
@@ -63,9 +64,9 @@ func _ready() -> void:
 		print("DEBUG dict_load_ms=%d words=%d" % [Time.get_ticks_msec() - load_started, _dictionary.size()])
 	if loaded:
 		_state = State.READY
-		_show_overlay("Jueguito", INTRO_TEXT, "Jugar", true)
+		_show_overlay(GAME_TITLE, INTRO_TEXT, "Jugar", true)
 	else:
-		_show_overlay("Jueguito", "No se pudo cargar el diccionario.", "", false)
+		_show_overlay(GAME_TITLE, "No se pudo cargar el diccionario.", "", false)
 
 
 func _process(delta: float) -> void:
@@ -192,7 +193,9 @@ func _build_overlay() -> void:
 
 	_overlay_title = Label.new()
 	_overlay_title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	_overlay_title.add_theme_font_size_override("font_size", 68)
+	_overlay_title.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_overlay_title.custom_minimum_size = Vector2(500, 0)
+	_overlay_title.add_theme_font_size_override("font_size", 60)
 	_text_labels.append(_overlay_title)
 	box.add_child(_overlay_title)
 
