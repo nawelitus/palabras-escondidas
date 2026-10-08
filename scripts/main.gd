@@ -44,6 +44,8 @@ var _overlay_skin_button: Button
 var _toggle_row: HBoxContainer
 var _sound_button: Button
 var _haptics_button: Button
+var _credits_button: Button
+var _credits: CreditsView
 var _last_second := 0
 
 var _panels: Array[PanelContainer] = []
@@ -97,8 +99,10 @@ func _notification(what: int) -> void:
 		NOTIFICATION_APPLICATION_PAUSED, NOTIFICATION_APPLICATION_FOCUS_OUT:
 			_pause_round()
 		NOTIFICATION_WM_GO_BACK_REQUEST:
-			# Android back button: pause mid-round, otherwise leave the game.
-			if _state == State.PLAYING:
+			# Android back button: close the credits, pause mid-round, otherwise leave the game.
+			if _credits != null and _credits.visible:
+				_credits.hide_credits()
+			elif _state == State.PLAYING:
 				_pause_round()
 			else:
 				get_tree().quit()
@@ -165,6 +169,9 @@ func _build_ui() -> void:
 	scroll.add_child(_found_flow)
 
 	_build_overlay()
+	_credits = CreditsView.new()
+	add_child(_credits)
+	_credits.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	_update_labels()
 
 
@@ -234,6 +241,11 @@ func _build_overlay() -> void:
 	_toggle_row.add_child(_haptics_button)
 	_refresh_toggle_texts()
 
+	_credits_button = _make_button("Créditos y licencias", 24)
+	_credits_button.custom_minimum_size = Vector2(0, 64)
+	_credits_button.pressed.connect(func() -> void: _credits.show_credits())
+	box.add_child(_credits_button)
+
 
 func _add_stat(parent: Control, caption: String) -> Label:
 	var panel := PanelContainer.new()
@@ -293,6 +305,7 @@ func _apply_skin(skin: GameSkin) -> void:
 	for button in _buttons:
 		_style_button(button, skin)
 	_overlay_skin_button.text = "Estilo: " + skin.display_name
+	_credits.set_skin(skin)
 	_rebuild_found_chips()
 	_update_timer()
 
@@ -350,6 +363,7 @@ func _rebuild_found_chips() -> void:
 func _add_chip(word: String, at_front: bool) -> void:
 	var skin := _current_skin()
 	var chip := PanelContainer.new()
+	chip.mouse_filter = Control.MOUSE_FILTER_PASS  # let drags scroll the word list
 	chip.add_theme_stylebox_override("panel", _chip_style(skin))
 	var label := Label.new()
 	label.text = word.to_upper()
@@ -391,6 +405,8 @@ func _resume_round() -> void:
 func _start_round() -> void:
 	var started := Time.get_ticks_msec()
 	var board := _generator.generate_playable(_dictionary, MIN_PLAYABLE_WORDS)
+	if OS.is_debug_build():
+		board = _debug_board_override(board)
 	_solutions = BoardSolver.solve(board, _dictionary)
 	if OS.is_debug_build():
 		print("DEBUG round_start_ms=%d" % (Time.get_ticks_msec() - started))
@@ -530,10 +546,21 @@ func _show_overlay(title: String, body: String, button_text: String, show_button
 	_play_button.visible = show_buttons
 	_overlay_skin_button.visible = show_buttons
 	_toggle_row.visible = show_buttons
+	_credits_button.visible = show_buttons
 	_overlay.visible = true
 
 
 # --- Debug -----------------------------------------------------------------
+
+## Debug builds only: user://debug_board.txt holds 16 comma-separated tiles that
+## replace the random board (used to take reproducible store screenshots).
+func _debug_board_override(fallback: PackedStringArray) -> PackedStringArray:
+	var path := "user://debug_board.txt"
+	if not FileAccess.file_exists(path):
+		return fallback
+	var tiles := FileAccess.get_file_as_string(path).strip_edges().split(",")
+	return tiles if tiles.size() == BoardView.SIZE * BoardView.SIZE else fallback
+
 
 ## Prints geometry and a few solvable words so UI tests on a device/emulator
 ## can drive the board without guessing.
