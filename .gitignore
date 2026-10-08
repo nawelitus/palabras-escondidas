@@ -1,0 +1,17 @@
+# Godot 4
+.godot/
+*.translation
+
+# Android / export
+# export_presets.cfg is tracked on purpose (dictionary include filter, vibrate
+# permission). When a release keystore is added, keep its credentials out of it.
+/android/
+/build/
+*.keystore
+*.jks
+*.apk
+*.aab
+*.idsig
+
+# Local tooling
+.atl/
