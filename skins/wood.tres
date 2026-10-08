@@ -1,0 +1,43 @@
+[gd_resource type="Resource" format=3]
+
+[ext_resource type="Script" path="res://scripts/game_skin.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+display_name = "Papel y madera"
+background_kind = 0
+bg_color_a = Color(0.55, 0.35, 0.2, 1)
+bg_color_b = Color(0.36, 0.21, 0.11, 1)
+bg_accent = Color(0.12, 0.07, 0.03, 1)
+text_color = Color(0.98, 0.93, 0.82, 1)
+text_dim_color = Color(0.8, 0.7, 0.55, 1)
+accent_color = Color(0.95, 0.71, 0.2, 1)
+danger_color = Color(0.9, 0.35, 0.25, 1)
+panel_color = Color(0.2, 0.12, 0.06, 0.85)
+panel_border_color = Color(0.55, 0.38, 0.2, 1)
+panel_border_width = 3
+panel_radius = 18
+button_color = Color(0.8, 0.55, 0.25, 1)
+button_text_color = Color(0.18, 0.1, 0.04, 1)
+button_border_color = Color(0.45, 0.28, 0.12, 1)
+button_border_width = 3
+button_radius = 16
+board_color = Color(0.17, 0.1, 0.05, 1)
+board_border_color = Color(0.4, 0.26, 0.13, 1)
+board_radius = 28
+path_color = Color(0.96, 0.74, 0.25, 0.65)
+tile_color = Color(0.95, 0.89, 0.74, 1)
+tile_border_color = Color(0.78, 0.62, 0.38, 1)
+tile_text_color = Color(0.23, 0.13, 0.07, 1)
+tile_selected_color = Color(0.96, 0.74, 0.25, 1)
+tile_selected_text_color = Color(0.23, 0.13, 0.07, 1)
+tile_valid_color = Color(0.55, 0.8, 0.45, 1)
+tile_invalid_color = Color(0.85, 0.42, 0.3, 1)
+tile_repeat_color = Color(0.8, 0.75, 0.55, 1)
+tile_radius = 0.16
+tile_border_width = 4
+tile_gap = 0.1
+tile_shadow_color = Color(0, 0, 0, 0.45)
+tile_shadow_size = 10
+tile_shadow_offset = Vector2(0, 6)
+tile_tilt_degrees = 3.0
