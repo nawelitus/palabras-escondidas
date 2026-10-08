@@ -1,6 +1,9 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">
-  <!-- Android masks launcher icons to a circle of ~66% of the canvas, so the
-       tile and letter stay inside that safe zone and the wood shows around it. -->
+  <!-- Wooden table, a 3x3 board of lettered dice and an amber path spelling DADO
+       (one step is diagonal). Letters are stroked paths because Godot's SVG import
+       does not render <text>. Android masks launcher icons to a circle of ~66% of
+       the canvas, so everything important stays in the central square.
+       Board:  D E S / R A D / T I O -->
   <defs>
     <linearGradient id="wood" x1="0" y1="0" x2="1" y2="1">
       <stop offset="0" stop-color="#8c5a33"/>
@@ -13,7 +16,43 @@
     <line x1="256" y1="0" x2="256" y2="512"/>
     <line x1="384" y1="0" x2="384" y2="512"/>
   </g>
-  <rect x="143" y="155" width="226" height="226" rx="44" fill="#2e1a0b" opacity="0.45"/>
-  <rect x="143" y="143" width="226" height="226" rx="44" fill="#f1e3c0" stroke="#c9a66b" stroke-width="8"/>
-  <path fill="#3b2412" fill-rule="evenodd" transform="translate(256 256) scale(0.6) translate(-295 -280)" d="M190 130 H290 C350 130 385 160 385 205 C385 235 370 255 345 266 C380 276 400 303 400 340 C400 395 360 430 295 430 H190 Z M235 170 V245 H285 C313 245 330 232 330 208 C330 184 313 170 285 170 Z M235 285 V390 H292 C325 390 345 372 345 337 C345 302 325 285 292 285 Z"/>
+  <!-- tray -->
+  <rect x="134" y="134" width="244" height="244" rx="34" fill="#2b1809" stroke="#6b4426" stroke-width="5"/>
+  <!-- path under the tiles: only the gaps show it, like in the game -->
+  <polyline points="179,179 256,256 333,256 333,333" fill="none" stroke="#f4b92f" stroke-width="22" stroke-linecap="round" stroke-linejoin="round"/>
+  <!-- tile shadows -->
+  <g fill="#000" opacity="0.3">
+    <rect x="146" y="151" width="66" height="66" rx="14"/><rect x="223" y="151" width="66" height="66" rx="14"/><rect x="300" y="151" width="66" height="66" rx="14"/>
+    <rect x="146" y="228" width="66" height="66" rx="14"/><rect x="223" y="228" width="66" height="66" rx="14"/><rect x="300" y="228" width="66" height="66" rx="14"/>
+    <rect x="146" y="305" width="66" height="66" rx="14"/><rect x="223" y="305" width="66" height="66" rx="14"/><rect x="300" y="305" width="66" height="66" rx="14"/>
+  </g>
+  <!-- tiles: cream dice, amber on the path -->
+  <g fill="#f1e3c0" stroke="#c9a66b" stroke-width="4">
+    <rect x="223" y="146" width="66" height="66" rx="14"/>
+    <rect x="300" y="146" width="66" height="66" rx="14"/>
+    <rect x="146" y="223" width="66" height="66" rx="14"/>
+    <rect x="146" y="300" width="66" height="66" rx="14"/>
+    <rect x="223" y="300" width="66" height="66" rx="14"/>
+  </g>
+  <g fill="#f4b92f" stroke="#b9801d" stroke-width="4">
+    <rect x="146" y="146" width="66" height="66" rx="14"/>
+    <rect x="223" y="223" width="66" height="66" rx="14"/>
+    <rect x="300" y="223" width="66" height="66" rx="14"/>
+    <rect x="300" y="300" width="66" height="66" rx="14"/>
+  </g>
+  <!-- letters: each glyph is drawn in a 40x56 box, scaled and centered on its tile -->
+  <g fill="none" stroke="#3b2412" stroke-width="8" stroke-linecap="round" stroke-linejoin="round">
+    <!-- row 0: D E S -->
+    <path transform="translate(165.4 160) scale(0.68)" d="M6 4 V52 H16 C32 52 36 40 36 28 C36 16 32 4 16 4 Z"/>
+    <path transform="translate(242.4 160) scale(0.68)" d="M34 4 H6 V52 H34 M6 28 H28"/>
+    <path transform="translate(319.4 160) scale(0.68)" d="M34 12 C30 6 24 4 18 4 C10 4 6 10 6 16 C6 24 12 26 20 28 C28 30 34 32 34 40 C34 48 28 52 20 52 C13 52 8 49 6 44"/>
+    <!-- row 1: R A D -->
+    <path transform="translate(165.4 237) scale(0.68)" d="M6 52 V4 H20 C30 4 34 10 34 17 C34 24 30 30 20 30 H6 M20 30 L34 52"/>
+    <path transform="translate(242.4 237) scale(0.68)" d="M4 52 L20 4 L36 52 M10 36 H30"/>
+    <path transform="translate(319.4 237) scale(0.68)" d="M6 4 V52 H16 C32 52 36 40 36 28 C36 16 32 4 16 4 Z"/>
+    <!-- row 2: T I O -->
+    <path transform="translate(165.4 314) scale(0.68)" d="M4 4 H36 M20 4 V52"/>
+    <path transform="translate(242.4 314) scale(0.68)" d="M10 4 H30 M20 4 V52 M10 52 H30"/>
+    <path transform="translate(319.4 314) scale(0.68)" d="M20 4 C8 4 5 16 5 28 C5 40 8 52 20 52 C32 52 35 40 35 28 C35 16 32 4 20 4 Z"/>
+  </g>
 </svg>

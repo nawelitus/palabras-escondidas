@@ -7,6 +7,8 @@ const MIN_PLAYABLE_WORDS := 100
 const LOW_TIME_SECONDS := 10.0
 const MESSAGE_SECONDS := 0.9
 const BOARD_SIDE := 672.0
+## Space above the HUD, on top of the display's safe-area inset (notch, camera hole).
+const TOP_MARGIN := 48
 const GAME_TITLE := "Palabras Escondidas"
 const INTRO_TEXT := "Encuentra palabras uniendo letras vecinas, también en diagonal. Tienes 3 minutos."
 
@@ -114,7 +116,7 @@ func _build_ui() -> void:
 	margin.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	for side in ["left", "right", "bottom"]:
 		margin.add_theme_constant_override("margin_" + side, 24)
-	margin.add_theme_constant_override("margin_top", 24 + int(_safe_top_inset()))
+	margin.add_theme_constant_override("margin_top", TOP_MARGIN + int(_safe_top_inset()))
 
 	var column := VBoxContainer.new()
 	column.add_theme_constant_override("separation", 14)
