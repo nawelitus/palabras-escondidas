@@ -18,17 +18,25 @@ Palabras Escondidas es un juego de palabras en español: desliza el dedo por un 
 CÓMO SE JUEGA
 • Une letras vecinas, también en diagonal, para formar palabras de 3 letras o más.
 • Cada letra se usa una sola vez por palabra.
-• Tienes 3 minutos por ronda. Las palabras largas dan más puntos.
+• Elige la duración: rápida (1 minuto), normal (2:20) o extendida (3:05).
+• Las palabras largas dan más puntos: 3 letras 1 punto, 4 o 5 letras 2, 6 letras 3 y 7 o más letras 4.
 • Al terminar, descubre cuántas palabras quedaban escondidas y cuál era la más larga.
 
 CARACTERÍSTICAS
 • Diccionario en español con más de 598.000 formas, incluidas conjugaciones y plurales.
 • Las tildes no cuentan: "camion" vale igual que "camión". La Ñ es una letra más.
-• Tres estilos visuales para elegir: Papel y madera, Colorido y Oscuro.
+• Tres estilos visuales para elegir: Colorido, Papel y madera y Oscuro.
 • Sonidos y vibración suaves, que puedes desactivar.
 • La partida se pausa sola si sales de la aplicación.
-• Guarda tu récord en el dispositivo.
-• Sin anuncios, sin compras dentro de la aplicación y sin necesidad de internet.
+• Guarda tu récord de cada duración en el dispositivo.
+• Sin anuncios, sin compras dentro de la aplicación y sin necesidad de internet para jugar solo.
+
+MULTIJUGADOR POR WIFI
+• Juega con hasta 8 personas conectadas a la misma red wifi: una crea la sala y las demás se unen escribiendo su nombre.
+• Todos juegan el mismo tablero al mismo tiempo y ven el marcador en vivo.
+• Las palabras que encuentran dos o más jugadores se anulan al final: gana quien encuentra las que nadie más vio.
+• Mesa de posiciones al terminar cada ronda, tabla acumulada de la sala e historial de tus últimas sesiones.
+• Sin servidores ni cuentas: la partida ocurre solo entre los dispositivos de tu red.
 
 CRÉDITOS
 El diccionario se basa en las listas del proyecto RLA-ES (licencia MPL 1.1).
@@ -37,7 +45,7 @@ El diccionario se basa en las listas del proyecto RLA-ES (licencia MPL 1.1).
 
 - App or game: Game
 - Category: Word
-- Tags: Word, Puzzle, Casual, Offline
+- Tags: Word, Puzzle, Casual, Multiplayer
 - Contact email: softwelitus@gmail.com (shown publicly on the store page)
 - Contains ads: No
 - In-app purchases: No

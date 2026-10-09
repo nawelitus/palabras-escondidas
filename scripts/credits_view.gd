@@ -5,7 +5,7 @@ extends Control
 
 signal closed
 
-const APP_VERSION := "1.0.0"
+const APP_VERSION := "1.1.0"
 const REPO_URL := "https://github.com/nawelitus/palabras-escondidas"
 const TOP_MARGIN := 72
 const SIDE_MARGIN := 24
