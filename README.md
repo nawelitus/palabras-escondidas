@@ -1,7 +1,9 @@
 # Palabras Escondidas
 
 A Spanish word game for Android, built with Godot 4. Link neighbouring letters on a
-4x4 board (diagonals included) and find as many words as you can in three minutes.
+4x4 board (diagonals included) and find as many words as you can before the clock runs out (quick 1:00, normal 2:20 or
+extended 3:05 rounds). Longer words score more: 3 letters 1 point, 4-5 letters 2, 6 letters 3,
+7 or more 4.
 
 - 598,680-word Spanish dictionary, accents ignored, `ñ` is its own letter, `Qu` is a single tile
 - Three switchable skins: paper and wood, colorful, dark

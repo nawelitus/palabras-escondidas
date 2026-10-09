@@ -5,6 +5,7 @@ extends MpPanel
 ## and the cumulative table of the room.
 
 signal next_round_requested
+signal duration_requested
 signal leave_requested
 
 var _ranking: Array = []
@@ -14,7 +15,9 @@ var _round := 0
 var _is_host := false
 var _can_continue := false
 var _selected_id := 0
+var _closed_text := ""
 var _next_button: Button
+var _duration_button: Button
 var _leave_button: Button
 
 
@@ -23,6 +26,9 @@ func _init() -> void:
 	_next_button = make_button("Nueva ronda", 36, 92)
 	_next_button.pressed.connect(func() -> void: next_round_requested.emit())
 	footer.add_child(_next_button)
+	_duration_button = make_button("", 26, 72)
+	_duration_button.pressed.connect(func() -> void: duration_requested.emit())
+	footer.add_child(_duration_button)
 	_leave_button = make_button("Salir de la sala", 28, 72)
 	_leave_button.pressed.connect(func() -> void: leave_requested.emit())
 	footer.add_child(_leave_button)
@@ -38,8 +44,20 @@ func set_data(ranking: Array, table: Array, my_id: int, round_number: int, is_ho
 	_is_host = is_host
 	_can_continue = can_continue
 	_selected_id = my_id
+	_closed_text = ""
 	if visible:
 		_render()
+
+
+## The round length for the next round, e.g. "Normal · 2:20" (the host can change it here).
+func set_duration_text(text: String) -> void:
+	_duration_button.text = "Duración: " + text
+
+
+## The room is gone but the results stay on screen so they can still be read.
+func set_room_closed(text: String) -> void:
+	_closed_text = text
+	_render()
 
 
 ## Updates only the buttons' state, when players leave while the results are shown.
@@ -52,6 +70,10 @@ func _render() -> void:
 	title_label.text = "Ronda %d" % _round
 	_render_footer()
 	clear_children(body)
+	if not _closed_text.is_empty():
+		var notice := make_dynamic_label(_closed_text, 26, false)
+		notice.add_theme_color_override("font_color", current_skin().danger_color)
+		body.add_child(notice)
 	body.add_child(make_dynamic_label("RANKING", 22, true))
 	for entry: Dictionary in _ranking:
 		body.add_child(_ranking_row(entry))
@@ -71,9 +93,13 @@ func _render() -> void:
 
 
 func _render_footer() -> void:
-	_next_button.visible = _is_host
+	_next_button.visible = _is_host and _closed_text.is_empty()
 	_next_button.disabled = not _can_continue
-	_leave_button.text = "Cerrar sala" if _is_host else "Salir de la sala"
+	_duration_button.visible = _next_button.visible
+	if not _closed_text.is_empty():
+		_leave_button.text = "Salir"
+	else:
+		_leave_button.text = "Cerrar sala" if _is_host else "Salir de la sala"
 
 
 func _ranking_row(entry: Dictionary) -> Control:

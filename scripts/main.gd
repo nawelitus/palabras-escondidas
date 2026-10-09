@@ -2,7 +2,6 @@ extends Control
 ## Game flow and HUD for one timed round. All styling comes from the active GameSkin.
 
 const DICTIONARY_PATH := "res://data/words_es.txt"
-const ROUND_SECONDS := 180.0
 const MIN_PLAYABLE_WORDS := 100
 const LOW_TIME_SECONDS := 10.0
 const MESSAGE_SECONDS := 0.9
@@ -10,7 +9,12 @@ const BOARD_SIDE := 672.0
 ## Space above the HUD, on top of the display's safe-area inset (notch, camera hole).
 const TOP_MARGIN := 48
 const GAME_TITLE := "Palabras Escondidas"
-const INTRO_TEXT := "Encuentra palabras uniendo letras vecinas, también en diagonal. Tienes 3 minutos."
+const INTRO_TEXT := "Encuentra palabras uniendo letras vecinas, también en diagonal. Tienes %s."
+const SESSION_BUTTON_HEIGHT := 88
+## How long the "toca otra vez" confirmation of the finish button stays armed.
+const FINISH_CONFIRM_SECONDS := 3.0
+## After a round ends, "Salir" ignores taps for this long: it takes the place of "Finalizar".
+const EXIT_LOCK_SECONDS := 0.8
 
 ## Longest time step the round clock accepts in one frame. Protects the timer
 ## if the OS delivers a huge delta after the app comes back from the background.
@@ -20,6 +24,8 @@ enum State { LOADING, READY, COUNTDOWN, PLAYING, PAUSED, FINISHED }
 ## SOLO is the single-player round; MULTI is a round of a LAN room, whose board, clock
 ## and final scores come from the host through MultiplayerUi.
 enum Mode { SOLO, MULTI }
+## What the bottom button does: it ends the round in progress, or leaves the game when none is.
+enum SessionAction { NONE, FINISH, EXIT }
 
 var _state := State.LOADING
 var _dictionary := WordDictionary.new()
@@ -27,7 +33,7 @@ var _generator := BoardGenerator.new()
 var _solutions := {}
 var _found: Array[String] = []
 var _score := 0
-var _time_left := ROUND_SECONDS
+var _time_left := RoundLength.seconds(RoundLength.DEFAULT_INDEX)
 var _message_left := 0.0
 var _record_at_start := 0
 
@@ -43,7 +49,11 @@ var _overlay: Control
 var _overlay_title: Label
 var _overlay_body: Label
 var _play_button: Button
+var _duration_button: Button
 var _overlay_skin_button: Button
+var _session_button: Button
+var _finish_confirm_left := 0.0
+var _exit_lock_left := 0.0
 var _toggle_row: HBoxContainer
 var _sound_button: Button
 var _haptics_button: Button
@@ -79,12 +89,17 @@ func _ready() -> void:
 		print("DEBUG dict_load_ms=%d words=%d" % [Time.get_ticks_msec() - load_started, _dictionary.size()])
 	if loaded:
 		_state = State.READY
-		_show_overlay(GAME_TITLE, INTRO_TEXT, "Jugar", true)
+		_show_overlay(GAME_TITLE, _intro_text(), "Jugar", true)
 	else:
 		_show_overlay(GAME_TITLE, "No se pudo cargar el diccionario.", "", false)
 
 
 func _process(delta: float) -> void:
+	if _finish_confirm_left > 0.0:
+		_finish_confirm_left = maxf(0.0, _finish_confirm_left - delta)
+	if _exit_lock_left > 0.0:
+		_exit_lock_left = maxf(0.0, _exit_lock_left - delta)
+	_refresh_session_button()
 	if _message_left > 0.0:
 		_message_left -= delta
 		if _message_left <= 0.0:
@@ -185,6 +200,9 @@ func _build_ui() -> void:
 	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
 	column.add_child(scroll)
+	var button_space := Control.new()  # room for the session button, which floats over the screen
+	button_space.custom_minimum_size = Vector2(0, SESSION_BUTTON_HEIGHT)
+	column.add_child(button_space)
 	_found_flow = HFlowContainer.new()
 	_found_flow.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_found_flow.add_theme_constant_override("h_separation", 10)
@@ -192,6 +210,7 @@ func _build_ui() -> void:
 	scroll.add_child(_found_flow)
 
 	_build_overlay()
+	_build_session_button()
 	_credits = CreditsView.new()
 	add_child(_credits)
 	_credits.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
@@ -201,6 +220,7 @@ func _build_ui() -> void:
 	_mp.round_begins.connect(_on_mp_round_begins)
 	_mp.scoreboard_updated.connect(_on_mp_scoreboard)
 	_mp.left_multiplayer.connect(_on_mp_left)
+	_mp.round_ended.connect(_on_mp_round_ended)
 	_update_labels()
 
 
@@ -255,6 +275,11 @@ func _build_overlay() -> void:
 	_mp_button.pressed.connect(_on_multiplayer_pressed)
 	box.add_child(_mp_button)
 
+	_duration_button = _make_button("", 28)
+	_duration_button.custom_minimum_size = Vector2(0, 72)
+	_duration_button.pressed.connect(_on_duration_pressed)
+	box.add_child(_duration_button)
+
 	_overlay_skin_button = _make_button("Estilo", 28)
 	_overlay_skin_button.custom_minimum_size = Vector2(0, 72)
 	_overlay_skin_button.pressed.connect(GameSettings.cycle_skin)
@@ -279,6 +304,20 @@ func _build_overlay() -> void:
 	_credits_button.custom_minimum_size = Vector2(0, 64)
 	_credits_button.pressed.connect(func() -> void: _credits.show_credits())
 	box.add_child(_credits_button)
+
+
+## One button, always at the bottom and above the start panel: "Finalizar" while a round
+## is on, "Salir" (closes the game) when there is none.
+func _build_session_button() -> void:
+	_session_button = _make_button("Salir", 34)
+	add_child(_session_button)
+	_session_button.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_WIDE)
+	_session_button.offset_left = 24
+	_session_button.offset_right = -24
+	_session_button.offset_bottom = -24
+	_session_button.offset_top = -24 - SESSION_BUTTON_HEIGHT
+	_session_button.pressed.connect(_on_session_pressed)
+	_session_button.visible = false
 
 
 func _add_stat(parent: Control, caption: String) -> Label:
@@ -419,8 +458,8 @@ func _start_round() -> void:
 	_found.clear()
 	_score = 0
 	_record_at_start = GameSettings.high_score
-	_time_left = ROUND_SECONDS
-	_last_second = ceili(ROUND_SECONDS)
+	_time_left = _round_seconds()
+	_last_second = ceili(_time_left)
 	_message_left = 0.0
 	_set_word_text("", _current_skin().text_color)
 	_board_view.set_board(board)
@@ -435,9 +474,11 @@ func _start_round() -> void:
 		_print_debug_hints(board)
 
 
-func _finish_round() -> void:
+func _finish_round(early := false) -> void:
 	_state = State.FINISHED
 	_board_view.active = false
+	_finish_confirm_left = 0.0
+	_exit_lock_left = EXIT_LOCK_SECONDS
 	if _mode == Mode.MULTI:
 		# The host decides the final scores (shared words cancel): its results screen
 		# opens by itself in a moment, on top of this one.
@@ -456,7 +497,7 @@ func _finish_round() -> void:
 		body += "\n¡Nuevo récord!"
 	Feedback.round_end(is_record)
 	_update_labels()
-	_show_overlay("¡Tiempo!", body, "Jugar de nuevo", true)
+	_show_overlay("Partida terminada" if early else "¡Tiempo!", body, "Jugar de nuevo", true)
 
 
 func _on_path_changed(word: String) -> void:
@@ -564,10 +605,80 @@ func _show_overlay(title: String, body: String, button_text: String, show_button
 	_overlay_skin_button.visible = show_buttons
 	_toggle_row.visible = show_buttons
 	_credits_button.visible = show_buttons
+	_duration_button.visible = show_buttons and _state != State.PAUSED  # not in the middle of a round
+	_duration_button.text = "Duración: " + RoundLength.label(GameSettings.duration_index)
 	_overlay.visible = true
 
 
 # --- Multiplayer ---------------------------------------------------------------
+
+func _round_seconds() -> float:
+	return RoundLength.seconds(GameSettings.duration_index)
+
+
+func _intro_text() -> String:
+	return INTRO_TEXT % RoundLength.spoken(GameSettings.duration_index)
+
+
+func _on_duration_pressed() -> void:
+	if _state != State.READY and _state != State.FINISHED:
+		return
+	GameSettings.cycle_duration()
+	_duration_button.text = "Duración: " + RoundLength.label(GameSettings.duration_index)
+	_time_left = _round_seconds()
+	if _state == State.READY:
+		_overlay_body.text = _intro_text()
+	_update_labels()  # the record belongs to the round length
+	_update_timer()
+
+
+# --- Finish / exit button --------------------------------------------------------------------
+
+func _session_action() -> SessionAction:
+	match _state:
+		State.PLAYING:
+			if _mode == Mode.SOLO or _mp.can_finish_round():
+				return SessionAction.FINISH
+		State.PAUSED:
+			if _mode == Mode.SOLO:
+				return SessionAction.FINISH
+		State.READY, State.FINISHED:
+			if _mode == Mode.SOLO and _overlay.visible:
+				return SessionAction.EXIT
+	return SessionAction.NONE
+
+
+func _refresh_session_button() -> void:
+	var action := _session_action()
+	_session_button.visible = action != SessionAction.NONE
+	if action == SessionAction.EXIT:
+		_session_button.text = "Salir"
+	elif action == SessionAction.FINISH:
+		_session_button.text = "¿Seguro? Toca otra vez" if _finish_confirm_left > 0.0 else "Finalizar"
+
+
+## Finishing asks for a second tap, so a stray touch does not end the round.
+func _on_session_pressed() -> void:
+	match _session_action():
+		SessionAction.EXIT:
+			if _exit_lock_left <= 0.0:
+				get_tree().quit()
+		SessionAction.FINISH:
+			if _finish_confirm_left <= 0.0:
+				_finish_confirm_left = FINISH_CONFIRM_SECONDS
+			else:
+				_finish_confirm_left = 0.0
+				_finish_early()
+	_refresh_session_button()
+
+
+func _finish_early() -> void:
+	if _mode == Mode.MULTI:
+		_mp.finish_round_early()  # the room's results screen opens for everybody
+		return
+	_board_view.revealed = true
+	_finish_round(true)
+
 
 func _on_multiplayer_pressed() -> void:
 	if _state != State.READY and _state != State.FINISHED:
@@ -605,6 +716,17 @@ func _on_mp_round_begins(board: PackedStringArray, countdown: float, duration: f
 	_state = State.COUNTDOWN
 
 
+## The results of the room arrived: if the host ended the round early, the local clock
+## stops here instead of running down behind the results screen.
+func _on_mp_round_ended() -> void:
+	if _state == State.COUNTDOWN or _state == State.PLAYING:
+		_state = State.FINISHED
+		_board_view.active = false
+		_finish_confirm_left = 0.0
+		_exit_lock_left = EXIT_LOCK_SECONDS
+	_overlay.visible = false
+
+
 func _run_countdown(delta: float) -> void:
 	_countdown_left -= minf(delta, MAX_TIME_STEP)
 	var shown := ceili(_countdown_left)
@@ -637,14 +759,14 @@ func _on_mp_left() -> void:
 	_state = State.READY
 	_board_view.active = false
 	_board_view.revealed = false
-	_time_left = ROUND_SECONDS
+	_time_left = _round_seconds()
 	_score = 0
 	_found.clear()
 	_rebuild_found_chips()
 	_update_labels()
 	_update_timer()
 	_set_word_text("", _current_skin().text_color)
-	_show_overlay(GAME_TITLE, INTRO_TEXT, "Jugar", true)
+	_show_overlay(GAME_TITLE, _intro_text(), "Jugar", true)
 
 
 # --- Debug -----------------------------------------------------------------

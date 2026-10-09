@@ -119,6 +119,7 @@ func _build() -> void:
 
 func _credits_text() -> String:
 	var text := "Palabras Escondidas\nVersión %s\n\n" % APP_VERSION
+	text += "Hecho por Nahuel\nDe Lavalle para el Mundo\n\n"
 	text += "DICCIONARIO\n"
 	text += "Las palabras provienen de los diccionarios Hunspell es_ES y es_AR del proyecto RLA-ES "
 	text += "(Recursos Lingüísticos Abiertos del Español), con licencia MPL 1.1 "

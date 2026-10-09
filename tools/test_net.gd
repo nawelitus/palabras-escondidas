@@ -309,14 +309,14 @@ func _test_room_flow() -> void:
 	beto.client.submit_word("zzzz")
 	_check(_wait(func() -> bool: return beto.last_status() == "invalid"), "a word that is not on the board is refused")
 	beto.client.submit_word("perro")
-	_check(_wait(func() -> bool: return beto.last_status() == "ok" and beto.confirmations[-1]["total"] == 3), "the total grows: casa 1 + perro 2")
+	_check(_wait(func() -> bool: return beto.last_status() == "ok" and beto.confirmations[-1]["total"] == 4), "the total grows: casa 2 + perro 2")
 	ana2.client.submit_word("casa")
 	ana2.client.submit_word("luna")
 	host.submit_local_word("luna")
 	var local := host.submit_local_word("sol")
 	_check(local["status"] == "ok", "the host plays through the same checks")
-	_check(_wait(func() -> bool: return ana2.score_of(1) == 2 and ana2.score_of(ana2.client.my_id) == 2), "live scores reach every device (provisional)")
-	_check(beto.score_of(beto.client.my_id) == 3, "Beto sees his provisional score")
+	_check(_wait(func() -> bool: return ana2.score_of(1) == 3 and ana2.score_of(ana2.client.my_id) == 4), "live scores reach every device (provisional)")
+	_check(beto.score_of(beto.client.my_id) == 4, "Beto sees his provisional score")
 	_check(not _live_scores_carry_words(ana2.scores), "the live board never carries words")
 
 	_check(_wait(func() -> bool: return beto.finished_count == 1 and ana2.finished_count == 1, 5000), "the round ends on every client")
@@ -341,6 +341,15 @@ func _test_room_flow() -> void:
 	_check(_wait(func() -> bool: return beto.started_count == 2 and ana2.started_count == 2), "round 2 reaches every client")
 	_check(_wait(func() -> bool: return beto.finished_count == 2 and ana2.finished_count == 2, 5000), "round 2 ends")
 	_check(beto.client.round_number == 2 and beto.table[0]["rounds"] == 2, "the table accumulates rounds")
+
+	# The host can end a round before the clock does.
+	host.round_seconds = 30.0
+	_check(host.start_round(), "a third round starts")
+	_check(_wait(func() -> bool: return beto.started_count == 3 and ana2.started_count == 3), "round 3 reaches every client")
+	_pump_for(700)  # the countdown is over, the round is far from over
+	_check(host.finish_now(), "the host ends the round early")
+	_check(_wait(func() -> bool: return beto.finished_count == 3 and ana2.finished_count == 3, 1500), "the early finish reaches every client at once")
+	_check(not host.finish_now(), "there is nothing left to end")
 	_reset()
 
 

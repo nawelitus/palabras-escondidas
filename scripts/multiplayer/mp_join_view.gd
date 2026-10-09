@@ -11,6 +11,7 @@ var _rooms: Array = []
 var _rooms_signature := ""
 var _status_label: Label
 var _notice_label: Label
+var _notice_is_error := false
 var _list := VBoxContainer.new()
 var _address_edit: LineEdit
 
@@ -46,6 +47,8 @@ func set_rooms(rooms: Array) -> void:
 		return
 	_rooms_signature = signature
 	_rooms = rooms
+	if _notice_is_error:
+		set_notice("")  # the list moved on: an old problem would only confuse
 	if visible:
 		_render()
 
@@ -55,6 +58,7 @@ func set_rooms(rooms: Array) -> void:
 func set_notice(text: String, is_error: bool = true) -> void:
 	_notice_label.text = text
 	_notice_label.visible = not text.is_empty()
+	_notice_is_error = is_error and not text.is_empty()
 	var skin := current_skin()
 	_notice_label.add_theme_color_override("font_color", skin.danger_color if is_error else skin.accent_color)
 

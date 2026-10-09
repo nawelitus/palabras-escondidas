@@ -127,6 +127,16 @@ func _run() -> void:
 	_check(await _wait(func() -> bool: return _host_ui.screen == MultiplayerUi.Screen.RESULTS and _guest_ui._results._round == 2, 6000), "round 2 finishes")
 	_check(_host_ui._results._table[0]["rounds"] == 2, "the cumulative table counts two rounds")
 
+	# --- The host ends a third round early ----------------------------------------------------------------
+	_host_ui._host.round_seconds = 30.0
+	_host_ui._results.next_round_requested.emit()
+	_check(await _wait(func() -> bool: return _host_rounds.size() == 3 and _guest_rounds.size() == 3), "a third round starts")
+	await get_tree().create_timer(0.55).timeout
+	_check(_host_ui.can_finish_round() and not _guest_ui.can_finish_round(), "only the host can end the round")
+	_host_ui.finish_round_early()
+	_check(await _wait(func() -> bool: return _host_ui.screen == MultiplayerUi.Screen.RESULTS and _guest_ui.screen == MultiplayerUi.Screen.RESULTS and _guest_ui._results._round == 3, 1500), "ending early opens the results on both devices")
+	_check(not _host_ui.can_finish_round(), "nothing to end afterwards")
+
 	# --- Leaving, with a confirmation, and the local history ----------------------------------------------
 	_guest_ui.handle_back()
 	_check(_guest_ui._dialog.visible, "Back asks for confirmation before leaving a room")
@@ -136,7 +146,7 @@ func _run() -> void:
 	_guest_ui._ask_to_leave()
 	_guest_ui._dialog.accepted.emit()
 	_check(_guest_ui.role == MultiplayerUi.Role.NONE and _guest_left == 1, "leaving returns to the start panel")
-	_check(_guest_ui._history.entries().size() == 1 and _guest_ui._history.entries()[0]["rounds"] == 2, "the guest's history keeps the two-round session")
+	_check(_guest_ui._history.entries().size() == 1 and _guest_ui._history.entries()[0]["rounds"] == 3, "the guest's history keeps the three-round session")
 	_check(await _wait(func() -> bool: return not _host_ui._host.session.is_online(_guest_ui.my_id()) or _host_ui._host.session.connected_count() == 1), "the host sees the guest leave")
 
 	_host_ui._ask_to_leave()
@@ -169,6 +179,24 @@ func _run() -> void:
 	lonely._menu.join_requested.emit("Eva")
 	lonely._join.manual_requested.emit("127.0.0.1:47999")  # nobody is listening
 	_check(await _wait(func() -> bool: return lonely._join._notice_label.text.contains("No se encontró"), 9000), "an unreachable address shows an explanation")
+	lonely._join.set_rooms([{"address": "10.0.0.5", "port": 47890, "room": "Mesa", "players": 1, "max": 8, "open": true}])
+	_check(not lonely._join._notice_label.visible, "an old error disappears once the room list changes")
+	lonely._join.set_notice("Conectando…", false)
+	lonely._join.set_rooms([])
+	_check(lonely._join._notice_label.visible, "a progress notice is not cleared by the room list")
+
+	# The host closes right after the last round: the guest keeps reading the results.
+	lonely._results.set_data([{"id": 1, "name": "Ana", "score": 3, "rank": 1, "connected": true, "counted": ["sol"], "cancelled": []}],
+		[], 2, 1, false, false)
+	lonely.role = MultiplayerUi.Role.CLIENT
+	lonely._show(MultiplayerUi.Screen.RESULTS)
+	lonely._on_room_closed("host_left")
+	_check(lonely.screen == MultiplayerUi.Screen.RESULTS and not lonely._dialog.visible, "the results stay on screen when the room closes")
+	_check(lonely._results._leave_button.text == "Salir", "the leave button just says 'Salir'")
+	var lonely_left := []
+	lonely.left_multiplayer.connect(func() -> void: lonely_left.append(true))
+	lonely._ask_to_leave()
+	_check(lonely_left.size() == 1 and lonely.screen == MultiplayerUi.Screen.NONE and not lonely._dialog.visible, "leaving a closed room needs no confirmation")
 	_check(MultiplayerUi.join_failure_text("room_full") == "La sala está llena.", "room_full text")
 	_check(MultiplayerUi.join_failure_text("round_in_progress").begins_with("La partida ya empezó"), "round_in_progress text")
 

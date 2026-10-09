@@ -124,6 +124,14 @@ func start_round() -> bool:
 	return true
 
 
+## Ends the round now, for everybody, instead of waiting for the clock.
+func finish_now() -> bool:
+	if not is_open() or session.phase != RoomSession.Phase.PLAYING:
+		return false
+	_finish_round()
+	return true
+
+
 ## The host's own words go through the same checks as everybody else's.
 func submit_local_word(word: String) -> Dictionary:
 	return _accept_word(host_id, word, Time.get_ticks_msec())

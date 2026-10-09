@@ -3,6 +3,7 @@ extends MpPanel
 ## The waiting room: who is in, and how to start (host) or what to wait for (guests).
 
 signal start_requested
+signal duration_requested
 signal leave_requested
 
 var _data := {
@@ -11,6 +12,7 @@ var _data := {
 	"can_start": false,
 }
 var _start_button: Button
+var _duration_button: Button
 var _leave_button: Button
 
 
@@ -19,6 +21,9 @@ func _init() -> void:
 	_start_button = make_button("Iniciar partida", 36, 92)
 	_start_button.pressed.connect(func() -> void: start_requested.emit())
 	footer.add_child(_start_button)
+	_duration_button = make_button("", 26, 72)
+	_duration_button.pressed.connect(func() -> void: duration_requested.emit())
+	footer.add_child(_duration_button)
 	_leave_button = make_button("Salir de la sala", 28, 72)
 	_leave_button.pressed.connect(func() -> void: leave_requested.emit())
 	footer.add_child(_leave_button)
@@ -32,10 +37,16 @@ func set_data(data: Dictionary) -> void:
 		_render()
 
 
+## The round length the host picked, e.g. "Normal · 2:20" (only the host can change it).
+func set_duration_text(text: String) -> void:
+	_duration_button.text = "Duración: " + text
+
+
 func _render() -> void:
 	var is_host: bool = _data["is_host"]
 	title_label.text = "Sala de %s" % _data["room"]
 	_start_button.visible = is_host
+	_duration_button.visible = is_host
 	_start_button.disabled = not _data["can_start"]
 	_leave_button.text = "Cerrar sala" if is_host else "Salir de la sala"
 	clear_children(body)

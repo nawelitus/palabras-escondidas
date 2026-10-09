@@ -11,6 +11,8 @@ signal round_begins(board: PackedStringArray, countdown: float, duration: float)
 signal scoreboard_updated(board: Array, my_id: int)
 ## The player left multiplayer (or the room closed): go back to the start panel.
 signal left_multiplayer
+## The results of a round arrived (whether the clock ran out or the host ended it early).
+signal round_ended
 
 enum Role { NONE, HOST, CLIENT }
 enum Screen { NONE, MENU, JOIN, LOBBY, GAME, RESULTS, HISTORY }
@@ -57,9 +59,12 @@ func _init() -> void:
 	_join.manual_requested.connect(_on_manual_address)
 	_join.back_requested.connect(_on_join_back)
 	_lobby.start_requested.connect(_on_start_requested)
+	_lobby.duration_requested.connect(_on_duration_requested)
 	_lobby.leave_requested.connect(_ask_to_leave)
 	_results.next_round_requested.connect(_on_start_requested)
+	_results.duration_requested.connect(_on_duration_requested)
 	_results.leave_requested.connect(_ask_to_leave)
+	_show_duration()
 	_history_view.back_requested.connect(_on_history_back)
 	_dialog.accepted.connect(_on_dialog_accepted)
 	_dialog.cancelled.connect(_on_dialog_cancelled)
@@ -86,6 +91,17 @@ func is_in_room() -> bool:
 
 func my_id() -> int:
 	return _my_id
+
+
+## True while this device hosts a room and a round is being played (it can end it early).
+func can_finish_round() -> bool:
+	return role == Role.HOST and _host != null and _host.session.phase == RoomSession.Phase.PLAYING
+
+
+## The host ends the round for everybody, without waiting for the clock.
+func finish_round_early() -> void:
+	if can_finish_round():
+		_host.finish_now()
 
 
 ## Sends a word found by this player. The host and the guests are checked the same way.
@@ -173,6 +189,8 @@ func _on_create_requested(player_name: String) -> void:
 	_player_name = player_name
 	var host := RoomHost.new()
 	host.board_factory = _make_board
+	host.round_seconds = RoundLength.seconds(GameSettings.duration_index)
+	_show_duration()
 	if host.open(player_name) != OK:
 		_dialog_action = DialogAction.NONE
 		_dialog.ask("No se pudo crear la sala", "Revisa que estés conectado a una red wifi e inténtalo de nuevo.")
@@ -196,6 +214,21 @@ func _on_start_requested() -> void:
 	if _host == null or not _host.start_round():
 		_dialog_action = DialogAction.NONE
 		_dialog.ask("No se puede empezar", "Se necesitan al menos %d jugadores conectados." % RoomSession.MIN_PLAYERS_TO_START)
+
+
+## The host picks the round length for the next round; guests follow the one in `start`.
+func _on_duration_requested() -> void:
+	if role != Role.HOST or _host == null:
+		return
+	GameSettings.cycle_duration()
+	_host.round_seconds = RoundLength.seconds(GameSettings.duration_index)
+	_show_duration()
+
+
+func _show_duration() -> void:
+	var text := RoundLength.label(GameSettings.duration_index)
+	_lobby.set_duration_text(text)
+	_results.set_duration_text(text)
 
 
 func _on_host_roster_changed() -> void:
@@ -288,10 +321,14 @@ func _on_room_closed(reason: String) -> void:
 	_save_history()
 	_client = null
 	role = Role.NONE
+	var text := "El anfitrión cerró la sala." if reason == "host_left" \
+		else "Se perdió la conexión con el anfitrión."
+	if screen == Screen.RESULTS:
+		_results.set_room_closed(text)  # the host closed right after the last round: keep the results
+		return
 	_show(Screen.NONE)
 	_dialog_action = DialogAction.ROOM_CLOSED
-	_dialog.ask("Sala cerrada", "El anfitrión cerró la sala." if reason == "host_left" \
-		else "Se perdió la conexión con el anfitrión.")
+	_dialog.ask("Sala cerrada", text)
 
 
 # --- Lobby, rounds and results ------------------------------------------------------------
@@ -330,11 +367,15 @@ func _on_round_finished(ranking: Array, table: Array) -> void:
 	var can_continue: bool = _host != null and _host.session.can_start()
 	_results.set_data(ranking, table, _my_id, round_number, role == Role.HOST, can_continue)
 	_show(Screen.RESULTS)
+	round_ended.emit()
 
 
 # --- Leaving ------------------------------------------------------------------------------
 
 func _ask_to_leave() -> void:
+	if role == Role.NONE:
+		_leave_room()  # the room is already gone: nothing to confirm
+		return
 	_dialog_action = DialogAction.CONFIRM_LEAVE
 	var is_host := role == Role.HOST
 	_dialog.ask(

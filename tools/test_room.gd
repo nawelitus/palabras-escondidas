@@ -53,12 +53,17 @@ func _board() -> PackedStringArray:
 
 func _test_word_points() -> void:
 	_check(WordScoring.points_for(3) == 1, "3 letters = 1")
-	_check(WordScoring.points_for(4) == 1, "4 letters = 1")
+	_check(WordScoring.points_for(4) == 2, "4 letters = 2")
 	_check(WordScoring.points_for(5) == 2, "5 letters = 2")
 	_check(WordScoring.points_for(6) == 3, "6 letters = 3")
-	_check(WordScoring.points_for(7) == 5, "7 letters = 5")
-	_check(WordScoring.points_for(8) == 11, "8 letters = 11")
-	_check(WordScoring.points_for(16) == 11, "16 letters = 11")
+	_check(WordScoring.points_for(7) == 4, "7 letters = 4")
+	_check(WordScoring.points_for(8) == 4, "8 letters = 4")
+	_check(WordScoring.points_for(16) == 4, "16 letters = 4")
+	_check(RoundLength.seconds(0) == 60.0 and RoundLength.seconds(1) == 140.0 and RoundLength.seconds(2) == 185.0, "round lengths: 1:00, 2:20, 3:05")
+	_check(RoundLength.clock(1) == "2:20" and RoundLength.clock(2) == "3:05", "clock text")
+	_check(RoundLength.label(0) == "Rápida · 1:00", "label text")
+	_check(RoundLength.spoken(0) == "1 minuto" and RoundLength.spoken(1) == "2 minutos y 20 segundos" and RoundLength.spoken(2) == "3 minutos y 5 segundos", "spoken text")
+	_check(RoundLength.seconds(99) == 185.0 and RoundLength.seconds(-1) == 60.0, "an index out of range is clamped")
 
 
 func _test_sanitize_name() -> void:
@@ -129,7 +134,7 @@ func _test_submit_word() -> void:
 	var session := _two_players()
 	session.start_round(_board(), _valid(["casa", "luna", "perro", "sol"]))
 	var ok := session.submit_word(1, "casa")
-	_check(ok["status"] == "ok" and ok["points"] == 1 and ok["total"] == 1, "valid word scores")
+	_check(ok["status"] == "ok" and ok["points"] == 2 and ok["total"] == 2, "valid word scores")
 	_check(session.submit_word(1, "casa")["status"] == "duplicate", "repeat by the same player")
 	_check(session.submit_word(1, " CASA ")["status"] == "duplicate", "repeat after normalizing case and spaces")
 	_check(session.submit_word(1, "xyzw")["status"] == "invalid", "word not on the board")
@@ -137,7 +142,7 @@ func _test_submit_word() -> void:
 	_check(session.submit_word(99, "casa")["status"] == "unknown_player", "unknown player")
 	var five := session.submit_word(2, "perro")
 	_check(five["status"] == "ok" and five["points"] == 2, "5 letters = 2 points")
-	_check(session.provisional_points(1) == 1 and session.provisional_points(2) == 2, "provisional totals")
+	_check(session.provisional_points(1) == 2 and session.provisional_points(2) == 2, "provisional totals")
 	_check(session.submit_word(2, "casa")["status"] == "ok", "the same word by another player is accepted live")
 
 
@@ -156,12 +161,12 @@ func _test_cancellation() -> void:
 	_check(ranking[0]["id"] == 1 and ranking[1]["id"] == 3 and ranking[2]["id"] == 2, "ranking A, C, B")
 	_check(ranking[0]["rank"] == 1 and ranking[1]["rank"] == 2 and ranking[2]["rank"] == 3, "ranks 1, 2, 3")
 	var repeated := RoomScoring.score_round({1: ["casa", "casa", "casa"], 2: ["luna"]})
-	_check(repeated[1]["counted"] == ["casa"] and repeated[1]["score"] == 1, "a repeated word inside one list counts once")
+	_check(repeated[1]["counted"] == ["casa"] and repeated[1]["score"] == 2, "a repeated word inside one list counts once")
 
 
 func _test_single_player_and_triples() -> void:
 	var alone := RoomScoring.score_round({1: ["casa", "perro"]})
-	_check(alone[1]["score"] == 3 and alone[1]["cancelled"].is_empty(), "alone, nothing is cancelled")
+	_check(alone[1]["score"] == 4 and alone[1]["cancelled"].is_empty(), "alone, nothing is cancelled")
 	var triple := RoomScoring.score_round({1: ["casa"], 2: ["casa"], 3: ["casa"]})
 	_check(triple[1]["score"] == 0 and triple[2]["score"] == 0 and triple[3]["score"] == 0, "three players, same word: nobody")
 	var nobody := RoomScoring.score_round({})
@@ -193,11 +198,12 @@ func _test_two_rounds_and_table() -> void:
 	session.start_round(_board(), _valid(["casa", "luna", "perro", "sol"]))
 	session.submit_word(1, "casa")
 	session.submit_word(1, "perro")
+	session.submit_word(1, "sol")
 	session.submit_word(2, "casa")
 	session.submit_word(2, "luna")
 	var first := session.finish_round()
-	_check(first[0]["id"] == 1 and first[0]["score"] == 2 and first[0]["rank"] == 1, "round 1: Ana wins with perro")
-	_check(first[1]["score"] == 1 and first[1]["cancelled"] == ["casa"], "round 1: Beto keeps luna, loses casa")
+	_check(first[0]["id"] == 1 and first[0]["score"] == 3 and first[0]["rank"] == 1, "round 1: Ana wins with perro and sol")
+	_check(first[1]["score"] == 2 and first[1]["cancelled"] == ["casa"], "round 1: Beto keeps luna, loses casa")
 	_check(session.phase == RoomSession.Phase.RESULTS, "phase after finishing")
 	_check(session.finish_round().is_empty(), "finishing twice does nothing")
 
@@ -213,8 +219,8 @@ func _test_two_rounds_and_table() -> void:
 
 	var table := session.cumulative_table()
 	_check(session.round_number == 3, "three rounds played")
-	_check(table[0]["name"] == "Beto" and table[0]["points"] == 3 and table[0]["wins"] == 1, "Beto: 1 + 0 + 2 points, 1 win")
-	_check(table[1]["name"] == "Ana" and table[1]["points"] == 2 and table[1]["wins"] == 1, "Ana: 2 points, 1 win")
+	_check(table[0]["name"] == "Beto" and table[0]["points"] == 4 and table[0]["wins"] == 1, "Beto: 2 + 0 + 2 points, 1 win")
+	_check(table[1]["name"] == "Ana" and table[1]["points"] == 3 and table[1]["wins"] == 1, "Ana: 3 points, 1 win")
 	_check(table[0]["rounds"] == 3, "rounds played counted")
 	var entry := session.history_entry(1700000000)
 	_check(entry["winner"] == "Beto" and entry["rounds"] == 3 and entry["time"] == 1700000000, "history entry summary")
@@ -258,7 +264,7 @@ func _test_provisional_board() -> void:
 	session.submit_word(2, "perro")
 	var live := session.provisional_board()
 	_check(live.size() == 2, "live board lists both players")
-	_check(live[0]["score"] == 1 and live[1]["score"] == 3, "live scores are provisional: shared words still count")
+	_check(live[0]["score"] == 2 and live[1]["score"] == 4, "live scores are provisional: shared words still count")
 	_check(not live[0].has("words") and not live[1].has("words"), "the live board never carries the words")
 
 
