@@ -482,18 +482,8 @@ func _reject(path: Array, kind: BoardView.Flash, text: String, color: Color) -> 
 	_show_message(text, color)
 
 
-## Classic Boggle scoring by word length (a "qu" tile counts as two letters).
 func _points_for(length: int) -> int:
-	if length <= 4:
-		return 1
-	match length:
-		5:
-			return 2
-		6:
-			return 3
-		7:
-			return 5
-	return 11
+	return WordScoring.points_for(length)
 
 
 func _show_message(text: String, color: Color) -> void:

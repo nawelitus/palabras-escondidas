@@ -24,6 +24,7 @@ They run headless and print a summary:
 godot --headless --path . --import --quit
 godot --headless --path . --quit-after 600 -s tools/test_board.gd
 godot --headless --path . --quit-after 600 -s tools/test_sound.gd
+godot --headless --path . --quit-after 900 -s tools/test_room.gd
 ```
 
 ## Build for Android
