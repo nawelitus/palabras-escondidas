@@ -25,6 +25,7 @@ godot --headless --path . --import --quit
 godot --headless --path . --quit-after 600 -s tools/test_board.gd
 godot --headless --path . --quit-after 600 -s tools/test_sound.gd
 godot --headless --path . --quit-after 900 -s tools/test_room.gd
+godot --headless --path . --quit-after 3000 -s tools/test_net.gd
 ```
 
 ## Build for Android

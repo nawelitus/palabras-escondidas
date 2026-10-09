@@ -74,6 +74,11 @@ func has_player(player_id: int) -> bool:
 	return _players.has(player_id)
 
 
+## True while the player is in the room and has not disconnected.
+func is_online(player_id: int) -> bool:
+	return _players.has(player_id) and _players[player_id]["connected"]
+
+
 func player_name(player_id: int) -> String:
 	return String(_players[player_id]["name"]) if _players.has(player_id) else ""
 
