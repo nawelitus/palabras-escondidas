@@ -16,7 +16,10 @@ const INTRO_TEXT := "Encuentra palabras uniendo letras vecinas, también en diag
 ## if the OS delivers a huge delta after the app comes back from the background.
 const MAX_TIME_STEP := 0.25
 
-enum State { LOADING, READY, PLAYING, PAUSED, FINISHED }
+enum State { LOADING, READY, COUNTDOWN, PLAYING, PAUSED, FINISHED }
+## SOLO is the single-player round; MULTI is a round of a LAN room, whose board, clock
+## and final scores come from the host through MultiplayerUi.
+enum Mode { SOLO, MULTI }
 
 var _state := State.LOADING
 var _dictionary := WordDictionary.new()
@@ -48,6 +51,14 @@ var _credits_button: Button
 var _credits: CreditsView
 var _last_second := 0
 
+var _mode := Mode.SOLO
+var _mp: MultiplayerUi
+var _mp_button: Button
+var _scoreboard: MpScoreboard
+var _record_caption: Label
+var _countdown_left := 0.0
+var _mp_scores: Array = []
+
 var _panels: Array[PanelContainer] = []
 var _text_labels: Array[Label] = []
 var _dim_labels: Array[Label] = []
@@ -78,6 +89,9 @@ func _process(delta: float) -> void:
 		_message_left -= delta
 		if _message_left <= 0.0:
 			_set_word_text("", _current_skin().text_color)
+	if _state == State.COUNTDOWN:
+		_run_countdown(delta)
+		return
 	if _state != State.PLAYING:
 		return
 	_time_left -= minf(delta, MAX_TIME_STEP)
@@ -97,11 +111,15 @@ func _process(delta: float) -> void:
 func _notification(what: int) -> void:
 	match what:
 		NOTIFICATION_APPLICATION_PAUSED, NOTIFICATION_APPLICATION_FOCUS_OUT:
-			_pause_round()
+			if _mode == Mode.SOLO:  # a room's clock belongs to everybody: it never pauses
+				_pause_round()
 		NOTIFICATION_WM_GO_BACK_REQUEST:
-			# Android back button: close the credits, pause mid-round, otherwise leave the game.
+			# Android back button: close the credits, then any multiplayer screen, then pause
+			# a solo round, otherwise leave the game.
 			if _credits != null and _credits.visible:
 				_credits.hide_credits()
+			elif _mp != null and _mp.handle_back():
+				pass
 			elif _state == State.PLAYING:
 				_pause_round()
 			else:
@@ -132,6 +150,7 @@ func _build_ui() -> void:
 	_score_label = _add_stat(bar, "PUNTOS")
 	_timer_label = _add_stat(bar, "TIEMPO")
 	_record_label = _add_stat(bar, "RÉCORD")
+	_record_caption = _record_label.get_parent().get_child(0)  # the caption becomes "PUESTO" in a room
 	var skin_button := _make_button("Estilo", 26)
 	skin_button.pressed.connect(GameSettings.cycle_skin)
 	bar.add_child(skin_button)
@@ -153,6 +172,10 @@ func _build_ui() -> void:
 	_board_view.tile_selected.connect(Feedback.tile_step)
 	column.add_child(_board_view)
 
+	_scoreboard = MpScoreboard.new()
+	_scoreboard.visible = false
+	column.add_child(_scoreboard)
+
 	_found_caption = Label.new()
 	_found_caption.add_theme_font_size_override("font_size", 22)
 	_dim_labels.append(_found_caption)
@@ -172,6 +195,12 @@ func _build_ui() -> void:
 	_credits = CreditsView.new()
 	add_child(_credits)
 	_credits.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	_mp = MultiplayerUi.new()
+	add_child(_mp)
+	_mp.setup(_dictionary, _generator)
+	_mp.round_begins.connect(_on_mp_round_begins)
+	_mp.scoreboard_updated.connect(_on_mp_scoreboard)
+	_mp.left_multiplayer.connect(_on_mp_left)
 	_update_labels()
 
 
@@ -220,6 +249,11 @@ func _build_overlay() -> void:
 	_play_button.custom_minimum_size = Vector2(0, 96)
 	_play_button.pressed.connect(_on_play_pressed)
 	box.add_child(_play_button)
+
+	_mp_button = _make_button("Multijugador", 34)
+	_mp_button.custom_minimum_size = Vector2(0, 84)
+	_mp_button.pressed.connect(_on_multiplayer_pressed)
+	box.add_child(_mp_button)
 
 	_overlay_skin_button = _make_button("Estilo", 28)
 	_overlay_skin_button.custom_minimum_size = Vector2(0, 72)
@@ -306,51 +340,22 @@ func _apply_skin(skin: GameSkin) -> void:
 		_style_button(button, skin)
 	_overlay_skin_button.text = "Estilo: " + skin.display_name
 	_credits.set_skin(skin)
+	_mp.apply_skin(skin)
+	_scoreboard.apply_skin(skin)
 	_rebuild_found_chips()
 	_update_timer()
 
 
 func _panel_style(skin: GameSkin) -> StyleBoxFlat:
-	var style := StyleBoxFlat.new()
-	style.bg_color = skin.panel_color
-	style.border_color = skin.panel_border_color
-	style.set_border_width_all(skin.panel_border_width)
-	style.set_corner_radius_all(skin.panel_radius)
-	style.set_content_margin_all(10)
-	style.anti_aliasing = true
-	return style
+	return UiStyle.panel(skin)
 
 
 func _style_button(button: Button, skin: GameSkin) -> void:
-	var fills := {
-		"normal": skin.button_color,
-		"hover": skin.button_color.lightened(0.12),
-		"pressed": skin.button_color.darkened(0.15),
-		"focus": skin.button_color,
-	}
-	for state: String in fills:
-		var style := StyleBoxFlat.new()
-		style.bg_color = fills[state]
-		style.border_color = skin.button_border_color
-		style.set_border_width_all(skin.button_border_width)
-		style.set_corner_radius_all(skin.button_radius)
-		style.content_margin_left = 22
-		style.content_margin_right = 22
-		style.content_margin_top = 10
-		style.content_margin_bottom = 10
-		style.anti_aliasing = true
-		button.add_theme_stylebox_override(state, style)
-	for key in ["font_color", "font_hover_color", "font_pressed_color", "font_focus_color"]:
-		button.add_theme_color_override(key, skin.button_text_color)
+	UiStyle.style_button(button, skin)
 
 
 func _chip_style(skin: GameSkin) -> StyleBoxFlat:
-	var style := _panel_style(skin)
-	style.set_corner_radius_all(maxi(skin.panel_radius / 2, 8))
-	style.set_content_margin_all(8)
-	style.content_margin_left = 14
-	style.content_margin_right = 14
-	return style
+	return UiStyle.chip(skin)
 
 
 func _rebuild_found_chips() -> void:
@@ -403,6 +408,7 @@ func _resume_round() -> void:
 
 
 func _start_round() -> void:
+	_set_mode(Mode.SOLO)
 	var started := Time.get_ticks_msec()
 	var board := _generator.generate_playable(_dictionary, MIN_PLAYABLE_WORDS)
 	if OS.is_debug_build():
@@ -432,6 +438,12 @@ func _start_round() -> void:
 func _finish_round() -> void:
 	_state = State.FINISHED
 	_board_view.active = false
+	if _mode == Mode.MULTI:
+		# The host decides the final scores (shared words cancel): its results screen
+		# opens by itself in a moment, on top of this one.
+		_update_labels()
+		_show_overlay("¡Tiempo!", "Calculando resultados…", "", false)
+		return
 	GameSettings.submit_score(_score)
 	var is_record := _score > _record_at_start
 	var longest := ""
@@ -466,7 +478,10 @@ func _on_word_submitted(word: String, path: Array) -> void:
 		Feedback.word_ok(word.length())
 		var points := _points_for(word.length())
 		_score += points
-		GameSettings.submit_score(_score)  # saved right away: the record survives closing the app
+		if _mode == Mode.MULTI:
+			_mp.submit_word(word)  # the host has the final say; its scoreboard corrects this score
+		else:
+			GameSettings.submit_score(_score)  # saved right away: the record survives closing the app
 		_found.append(word)
 		_add_chip(word, true)
 		_board_view.flash(path, BoardView.Flash.OK)
@@ -502,8 +517,19 @@ func _display_word(word: String) -> String:
 
 func _update_labels() -> void:
 	_score_label.text = str(_score)
-	_record_label.text = str(maxi(GameSettings.high_score, _score))
+	_record_label.text = _rank_text() if _mode == Mode.MULTI else str(maxi(GameSettings.high_score, _score))
 	_found_caption.text = "PALABRAS ENCONTRADAS (%d)" % _found.size()
+
+
+## "2/4": this player's place among the provisional scores of the room.
+func _rank_text() -> String:
+	if _mp_scores.is_empty():
+		return "-"
+	var ahead := 0
+	for entry: Dictionary in _mp_scores:
+		if entry["score"] > _score:
+			ahead += 1
+	return "%d/%d" % [ahead + 1, _mp_scores.size()]
 
 
 func _update_timer() -> void:
@@ -534,10 +560,91 @@ func _show_overlay(title: String, body: String, button_text: String, show_button
 	_overlay_body.text = body
 	_play_button.text = button_text
 	_play_button.visible = show_buttons
+	_mp_button.visible = show_buttons
 	_overlay_skin_button.visible = show_buttons
 	_toggle_row.visible = show_buttons
 	_credits_button.visible = show_buttons
 	_overlay.visible = true
+
+
+# --- Multiplayer ---------------------------------------------------------------
+
+func _on_multiplayer_pressed() -> void:
+	if _state != State.READY and _state != State.FINISHED:
+		return
+	_overlay.visible = false
+	_mp.open()
+
+
+func _set_mode(mode: Mode) -> void:
+	_mode = mode
+	var in_room := mode == Mode.MULTI
+	_scoreboard.visible = in_room
+	_record_caption.text = "PUESTO" if in_room else "RÉCORD"
+	_mp_scores = []
+	_scoreboard.set_board([], _mp.my_id())
+
+
+## A round of the room starts here: same board for everybody, a short countdown, then
+## the clock. The letters stay hidden until the countdown ends, so nobody gets a head start.
+func _on_mp_round_begins(board: PackedStringArray, countdown: float, duration: float) -> void:
+	_set_mode(Mode.MULTI)
+	_found.clear()
+	_score = 0
+	_time_left = duration
+	_countdown_left = countdown
+	_last_second = ceili(countdown) + 1
+	_message_left = 0.0
+	_board_view.set_board(board)
+	_board_view.revealed = false
+	_board_view.active = false
+	_rebuild_found_chips()
+	_update_labels()
+	_update_timer()
+	_overlay.visible = false
+	_state = State.COUNTDOWN
+
+
+func _run_countdown(delta: float) -> void:
+	_countdown_left -= minf(delta, MAX_TIME_STEP)
+	var shown := ceili(_countdown_left)
+	if shown != _last_second:
+		_last_second = shown
+		if shown > 0:
+			Feedback.tick()
+			_set_word_text(str(shown), _current_skin().accent_color)
+	if _countdown_left <= 0.0:
+		_state = State.PLAYING
+		_last_second = ceili(_time_left)
+		_board_view.revealed = true
+		_board_view.active = true
+		_show_message("¡Ya!", _current_skin().accent_color)
+
+
+## Provisional scores of the whole room. The host's number for this player replaces
+## the one counted locally, so both always agree.
+func _on_mp_scoreboard(board: Array, my_id: int) -> void:
+	_mp_scores = board
+	for entry: Dictionary in board:
+		if entry["id"] == my_id:
+			_score = entry["score"]
+	_scoreboard.set_board(board, my_id)
+	_update_labels()
+
+
+func _on_mp_left() -> void:
+	_set_mode(Mode.SOLO)
+	_state = State.READY
+	_board_view.active = false
+	_board_view.revealed = false
+	_time_left = ROUND_SECONDS
+	_score = 0
+	_found.clear()
+	_rebuild_found_chips()
+	_update_labels()
+	_update_timer()
+	_set_word_text("", _current_skin().text_color)
+	_show_overlay(GAME_TITLE, INTRO_TEXT, "Jugar", true)
 
 
 # --- Debug -----------------------------------------------------------------

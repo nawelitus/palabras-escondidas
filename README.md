@@ -5,7 +5,10 @@ A Spanish word game for Android, built with Godot 4. Link neighbouring letters o
 
 - 598,680-word Spanish dictionary, accents ignored, `ñ` is its own letter, `Qu` is a single tile
 - Three switchable skins: paper and wood, colorful, dark
-- Offline, no ads, no tracking. The only permission is vibration
+- Single player works offline. No ads, no tracking, no accounts
+- Multiplayer for 2 to 8 players on the same WiFi (no server, no internet service): one
+  device hosts, the others join; everybody gets the same board; words found by several
+  players cancel at the end. Permissions: vibration, and network access for that mode only
 - UI text is in Spanish
 
 Package id: `com.palabrasescondidas.game`
@@ -26,6 +29,13 @@ godot --headless --path . --quit-after 600 -s tools/test_board.gd
 godot --headless --path . --quit-after 600 -s tools/test_sound.gd
 godot --headless --path . --quit-after 900 -s tools/test_room.gd
 godot --headless --path . --quit-after 3000 -s tools/test_net.gd
+godot --headless --path . res://tools/test_mp_ui.tscn --quit-after 4000
+```
+
+To look at the multiplayer screens with sample data (needs a real window):
+
+```
+godot --path . res://tools/render_ui_samples.tscn --resolution 720x1280 --rendering-driver opengl3 --quit-after 3000 -- <output folder>
 ```
 
 ## Build for Android

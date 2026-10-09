@@ -26,32 +26,10 @@ func _init() -> void:
 
 
 func set_skin(skin: GameSkin) -> void:
-	var panel_style := StyleBoxFlat.new()
-	# Opaque so the start panel underneath never shows through the long text.
-	panel_style.bg_color = Color(skin.panel_color.lerp(Color.BLACK, 0.35), 1.0)
-	panel_style.border_color = skin.panel_border_color
-	panel_style.set_border_width_all(skin.panel_border_width)
-	panel_style.set_corner_radius_all(skin.panel_radius)
-	panel_style.anti_aliasing = true
-	_panel.add_theme_stylebox_override("panel", panel_style)
+	_panel.add_theme_stylebox_override("panel", UiStyle.solid_panel(skin))
 	_title.add_theme_color_override("font_color", skin.text_color)
 	_body.add_theme_color_override("default_color", skin.text_color)
-	var fills := {
-		"normal": skin.button_color,
-		"hover": skin.button_color.lightened(0.12),
-		"pressed": skin.button_color.darkened(0.15),
-		"focus": skin.button_color,
-	}
-	for state: String in fills:
-		var style := StyleBoxFlat.new()
-		style.bg_color = fills[state]
-		style.border_color = skin.button_border_color
-		style.set_border_width_all(skin.button_border_width)
-		style.set_corner_radius_all(skin.button_radius)
-		style.anti_aliasing = true
-		_back_button.add_theme_stylebox_override(state, style)
-	for key in ["font_color", "font_hover_color", "font_pressed_color", "font_focus_color"]:
-		_back_button.add_theme_color_override(key, skin.button_text_color)
+	UiStyle.style_button(_back_button, skin)
 
 
 func show_credits() -> void:

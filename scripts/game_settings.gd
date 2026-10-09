@@ -13,6 +13,8 @@ const SKIN_PATHS: Array[String] = [
 var high_score := 0
 var sound_enabled := true
 var haptics_enabled := true
+## Name typed for multiplayer rooms; remembered so it is only typed once.
+var player_name := ""
 
 var _skins: Array[GameSkin] = []
 var _skin_index := 0
@@ -48,6 +50,13 @@ func set_haptics_enabled(value: bool) -> void:
 	_save()
 
 
+func set_player_name(value: String) -> void:
+	if value == player_name:
+		return
+	player_name = value
+	_save()
+
+
 ## Stores the score if it beats the record. Returns true on a new record.
 func submit_score(score: int) -> bool:
 	if score <= high_score:
@@ -65,6 +74,7 @@ func _load() -> void:
 	_skin_index = clampi(int(config.get_value("player", "skin_index", 0)), 0, _skins.size() - 1)
 	sound_enabled = bool(config.get_value("player", "sound_enabled", true))
 	haptics_enabled = bool(config.get_value("player", "haptics_enabled", true))
+	player_name = String(config.get_value("player", "player_name", ""))
 
 
 func _save() -> void:
@@ -73,4 +83,5 @@ func _save() -> void:
 	config.set_value("player", "skin_index", _skin_index)
 	config.set_value("player", "sound_enabled", sound_enabled)
 	config.set_value("player", "haptics_enabled", haptics_enabled)
+	config.set_value("player", "player_name", player_name)
 	config.save(SAVE_PATH)
