@@ -243,17 +243,17 @@ func _build_overlay() -> void:
 
 	var inner := MarginContainer.new()
 	for side in ["left", "right", "top", "bottom"]:
-		inner.add_theme_constant_override("margin_" + side, 32)
+		inner.add_theme_constant_override("margin_" + side, 24)
 	panel.add_child(inner)
 	var box := VBoxContainer.new()
-	box.add_theme_constant_override("separation", 22)
+	box.add_theme_constant_override("separation", 14)
 	inner.add_child(box)
 
 	_overlay_title = Label.new()
 	_overlay_title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_overlay_title.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	_overlay_title.custom_minimum_size = Vector2(500, 0)
-	_overlay_title.add_theme_font_size_override("font_size", 60)
+	_overlay_title.add_theme_font_size_override("font_size", 52)
 	_text_labels.append(_overlay_title)
 	box.add_child(_overlay_title)
 
@@ -261,27 +261,27 @@ func _build_overlay() -> void:
 	_overlay_body.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_overlay_body.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	_overlay_body.custom_minimum_size = Vector2(500, 0)
-	_overlay_body.add_theme_font_size_override("font_size", 32)
+	_overlay_body.add_theme_font_size_override("font_size", 28)
 	_text_labels.append(_overlay_body)
 	box.add_child(_overlay_body)
 
 	_play_button = _make_button("Jugar", 42)
-	_play_button.custom_minimum_size = Vector2(0, 96)
+	_play_button.custom_minimum_size = Vector2(0, 88)
 	_play_button.pressed.connect(_on_play_pressed)
 	box.add_child(_play_button)
 
 	_mp_button = _make_button("Multijugador", 34)
-	_mp_button.custom_minimum_size = Vector2(0, 84)
+	_mp_button.custom_minimum_size = Vector2(0, 76)
 	_mp_button.pressed.connect(_on_multiplayer_pressed)
 	box.add_child(_mp_button)
 
 	_duration_button = _make_button("", 28)
-	_duration_button.custom_minimum_size = Vector2(0, 72)
+	_duration_button.custom_minimum_size = Vector2(0, 64)
 	_duration_button.pressed.connect(_on_duration_pressed)
 	box.add_child(_duration_button)
 
 	_overlay_skin_button = _make_button("Estilo", 28)
-	_overlay_skin_button.custom_minimum_size = Vector2(0, 72)
+	_overlay_skin_button.custom_minimum_size = Vector2(0, 64)
 	_overlay_skin_button.pressed.connect(GameSettings.cycle_skin)
 	box.add_child(_overlay_skin_button)
 
@@ -290,18 +290,18 @@ func _build_overlay() -> void:
 	box.add_child(_toggle_row)
 	_sound_button = _make_button("", 26)
 	_sound_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	_sound_button.custom_minimum_size = Vector2(0, 72)
+	_sound_button.custom_minimum_size = Vector2(0, 64)
 	_sound_button.pressed.connect(_on_sound_toggled)
 	_toggle_row.add_child(_sound_button)
 	_haptics_button = _make_button("", 26)
 	_haptics_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	_haptics_button.custom_minimum_size = Vector2(0, 72)
+	_haptics_button.custom_minimum_size = Vector2(0, 64)
 	_haptics_button.pressed.connect(_on_haptics_toggled)
 	_toggle_row.add_child(_haptics_button)
 	_refresh_toggle_texts()
 
 	_credits_button = _make_button("Créditos y licencias", 24)
-	_credits_button.custom_minimum_size = Vector2(0, 64)
+	_credits_button.custom_minimum_size = Vector2(0, 56)
 	_credits_button.pressed.connect(func() -> void: _credits.show_credits())
 	box.add_child(_credits_button)
 

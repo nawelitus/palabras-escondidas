@@ -85,7 +85,7 @@ func _render_feature_graphic() -> void:
 	root.add_child(subtitle)
 
 	var tags := Label.new()
-	tags.text = "Sin anuncios  ·  Sin internet  ·  3 estilos"
+	tags.text = "Sin anuncios  ·  Multijugador por wifi"
 	tags.position = Vector2(52, 410)
 	tags.add_theme_font_size_override("font_size", 24)
 	tags.add_theme_color_override("font_color", skin.accent_color)
