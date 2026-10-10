@@ -8,6 +8,10 @@ signal next_round_requested
 signal duration_requested
 signal leave_requested
 
+## Words found by several players: yellow text under a red line (readable on every skin).
+const CANCELLED_COLOR := Color("ffd93d")
+const STRIKE_COLOR := Color("e5383b")
+
 var _ranking: Array = []
 var _table: Array = []
 var _my_id := 0
@@ -83,7 +87,7 @@ func _render() -> void:
 	if not selected.is_empty():
 		body.add_child(make_dynamic_label("PALABRAS DE %s" % String(selected["name"]).to_upper(), 22, true))
 		body.add_child(_words_text(selected))
-		body.add_child(make_dynamic_label("Las palabras tachadas las encontró más de un jugador y no suman puntos.", 22, true))
+		body.add_child(make_dynamic_label("Las palabras amarillas y tachadas las encontró más de un jugador y no suman puntos.", 22, true))
 
 	body.add_child(make_dynamic_label("ACUMULADO DE LA SALA", 22, true))
 	for row: Dictionary in _table:
@@ -126,23 +130,43 @@ func _ranking_row(entry: Dictionary) -> Control:
 	return button
 
 
-func _words_text(entry: Dictionary) -> RichTextLabel:
+## The words of one player, wrapped over several lines. The ones that counted use the
+## skin's text color; the cancelled ones are yellow with a red line through them, so it
+## is obvious they were discounted.
+func _words_text(entry: Dictionary) -> Control:
 	var skin := current_skin()
-	var parts := PackedStringArray()
+	var flow := HFlowContainer.new()
+	flow.mouse_filter = Control.MOUSE_FILTER_PASS
+	flow.add_theme_constant_override("h_separation", 22)
+	flow.add_theme_constant_override("v_separation", 4)
 	for word: String in entry["counted"]:
-		parts.append(word.to_upper())
-	var dim := skin.text_dim_color.to_html(false)
+		flow.add_child(_word_label(word, skin.text_color))
 	for word: String in entry["cancelled"]:
-		parts.append("[color=#%s][s]%s[/s][/color]" % [dim, word.to_upper()])
-	var label := RichTextLabel.new()
-	label.bbcode_enabled = true
-	label.fit_content = true
-	label.scroll_active = false
+		var label := _word_label(word, CANCELLED_COLOR)
+		var line := ColorRect.new()
+		line.color = STRIKE_COLOR
+		line.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		line.anchor_left = 0.0
+		line.anchor_right = 1.0
+		line.anchor_top = 0.5
+		line.anchor_bottom = 0.5
+		line.offset_left = -4.0
+		line.offset_right = 4.0
+		line.offset_top = -2.0
+		line.offset_bottom = 2.0
+		label.add_child(line)
+		flow.add_child(label)
+	if flow.get_child_count() == 0:
+		flow.add_child(_word_label("Ninguna palabra.", skin.text_color, false))
+	return flow
+
+
+func _word_label(word: String, color: Color, upper := true) -> Label:
+	var label := Label.new()
+	label.text = word.to_upper() if upper else word
 	label.mouse_filter = Control.MOUSE_FILTER_PASS
-	label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	label.add_theme_font_size_override("normal_font_size", 26)
-	label.add_theme_color_override("default_color", skin.text_color)
-	label.text = "   ".join(parts) if not parts.is_empty() else "Ninguna palabra."
+	label.add_theme_font_size_override("font_size", 26)
+	label.add_theme_color_override("font_color", color)
 	return label
 
 

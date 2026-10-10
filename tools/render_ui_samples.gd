@@ -99,6 +99,7 @@ func _lobby(is_host: bool) -> MpPanel:
 		"players": _players(), "addresses": PackedStringArray(["192.168.1.23"]),
 		"port": NetProtocol.GAME_PORT, "can_start": true,
 	})
+	view.set_duration_text("Normal · 2:20")
 	return view
 
 
@@ -121,6 +122,7 @@ func _results() -> MpPanel:
 	]
 	var view := MpResultsView.new()
 	view.set_data(ranking, table, 2, 3, true, true)
+	view.set_duration_text("Normal · 2:20")
 	return view
 
 
